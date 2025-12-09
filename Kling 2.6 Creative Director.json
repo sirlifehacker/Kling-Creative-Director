@@ -1,0 +1,532 @@
+{
+  "name": "Kling 2.6 Creative Director",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -64
+      ],
+      "id": "fd85b827-c479-4273-a168-134bcffe763d",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "=You are an AI system that analyzes a single streetwear fashion product photo. \nDescribe the image with detail, precision, and neutrality so another AI agent can generate a video prompt from it.\n\nYour output MUST be a structured JSON object with the following fields:\n\n{\n  \"environment\": \"\", \n  \"model_description\": \"\",\n  \"pose_and_body_language\": \"\",\n  \"outfit_details\": \"\",\n  \"lighting_and_mood\": \"\",\n  \"framing_and_composition\": \"\",\n  \"overall_vibe\": \"\"\n}\n\nRULES:\n\n- Be highly detailed but concise.\n- Describe what the model is doing physically (pose, posture, hand placement, gaze).\n- Describe the outfit accurately (style, fit, color, accessories).\n- Describe the environment and background in clear visual terms.\n- Describe the overall style and vibe (streetwear, minimal, edgy, relaxed, high-fashion, etc.)\n- DO NOT guess identity or name of the person.\n- DO NOT include opinions, emotions, or speculation.\n- ONLY describe what is visually observable.\n- DO NOT output anything outside the JSON structure.\n",
+        "imageUrls": "=https://drive.google.com/uc?export=download&id={{$json.property_reference_photo.match(/\\/d\\/([A-Za-z0-9_-]+)\\//)?.[1]}}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        576,
+        -48
+      ],
+      "id": "7944e758-0946-42d4-a20b-157f9a571f39",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "tWwb1KWa6XUjFTWr",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        80,
+        -64
+      ],
+      "id": "35f73260-4208-49b0-8d10-50720cf61593",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        768,
+        96
+      ],
+      "id": "7b274f16-f2cc-4705-9eec-7a1ee019c56b",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "730c8wXbkr5gp9nu",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"prompt\": \"[string]\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        944,
+        96
+      ],
+      "id": "78966593-1178-42eb-8dea-77e7a1a2e7b0",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        -128
+      ],
+      "id": "f22ad0f8-ccc7-4c53-87c3-df8d60a3763d",
+      "name": "Wait",
+      "webhookId": "6abcf85f-efe2-4973-b28a-f406475ce387"
+    },
+    {
+      "parameters": {
+        "name": "=",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1TFt7KBiIwOWrji6XgEc5YDr2ryUGLj8w",
+          "mode": "list",
+          "cachedResultName": "Arrival",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1TFt7KBiIwOWrji6XgEc5YDr2ryUGLj8w"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2176,
+        -48
+      ],
+      "id": "3bc90430-5128-4688-a52b-3c854aacdd0e",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7su4Gwa9TbBu2x3b",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/kling-video/v2.6/pro/image-to-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Key 61d38213-f6a9-422b-99e4-8aa79d2f488a:cf8c303a1f9398a83e2cffa58057d719"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.output.prompt }}\",\n  \"image_url\": \"https://drive.google.com/uc?export=download&id={{$('Get Shots from Notion').item.json.property_reference_photo.match(/\\/d\\/([A-Za-z0-9_-]+)\\//)?.[1]}}\",\n  \"duration\": \"5\",\n  \"negative_prompt\": \"blur, distort, and low quality\",\n  \"generate_audio\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1376,
+        48
+      ],
+      "id": "a0c89d49-6836-4dbe-a879-1feb372914ca",
+      "name": "Kling 2.6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Key 61d38213-f6a9-422b-99e4-8aa79d2f488a:cf8c303a1f9398a83e2cffa58057d719"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1664,
+        48
+      ],
+      "id": "59d69a24-c518-42e1-a725-d698fc54dc4a",
+      "name": "Get Video"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.video.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1968,
+        -48
+      ],
+      "id": "f667f095-2c33-4058-84e2-7dae72819926",
+      "name": "Download"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Get Shots from Notion').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Done"
+            },
+            {
+              "key": "Kling Video|url",
+              "urlValue": "={{ $('Get Video').item.json.video.url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2352,
+        -48
+      ],
+      "id": "4de2f9ae-1bb5-4c84-8bb7-924ce035ced6",
+      "name": "Update a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "lizn0liwed3b5Xb4",
+          "name": "Notion account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Fetch Images & Loop\n",
+        "height": 480,
+        "width": 752
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -400,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "0e8c9e7a-5604-4d96-ac60-94f021c3c62d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "2c255c8e-c066-81ba-a87f-ef899524698f",
+          "mode": "list",
+          "cachedResultName": "internet money (kling 2.6)",
+          "cachedResultUrl": "https://www.notion.so/2c255c8ec06681baa87fef899524698f"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Status|status",
+              "condition": "equals",
+              "statusValue": "Not started"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        -64
+      ],
+      "id": "12dcb94c-3a74-4d30-bc8d-1b880fe35321",
+      "name": "Get Shots from Notion",
+      "credentials": {
+        "notionApi": {
+          "id": "lizn0liwed3b5Xb4",
+          "name": "Notion account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Image Description: {{ $json['0'].content[0].text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an AI video concept generator for streetwear ecommerce content.\n\nYour job is to analyze a single image of a streetwear model and generate:\n\nOne simple camera move chosen ONLY from the following list:\n\nSlow Arc Shot\n\nTracking Shot\n\nStatic Shot\n\nSlow Dolly In\n\nSlow Dolly Out\n\nOne subtle, relaxed, natural action for the model to perform that fits:\n\nthe scene’s environment\n\nthe model’s pose\n\nthe streetwear aesthetic (youthful, confident, slightly edgy, effortless)\n\nRULES FOR CAMERA MOVE SELECTION\n\nChoose the camera move based on the overall energy, pose, and location in the image:\n\nSlow Arc Shot: Use when the model is standing still, posed confidently, or the environment is visually interesting.\n\nTracking Shot: Use when the model appears mid-walk, shifting weight, turning, or when movement is implied.\n\nStatic Shot: Use when the environment has strong geometry or the pose is calm, grounded, minimal.\n\nSlow Dolly In: Use when the photo feels intimate, seated, or the focus should draw into the outfit or expression.\n\nSlow Dolly Out: Use when the model is surrounded by strong architecture or open space and the scene benefits from revealing context.\n\nRULES FOR MODEL ACTION\n\nThe action must be:\n\nsubtle\n\nrealistic\n\nrelaxed\n\nconsistent with streetwear culture\n\nnatural for the current environment\n\nsomething a young, stylish, confident person would do in public\n\nExamples of acceptable action styles:\n\nadjusting clothing (shirt, belt, jacket, glasses)\n\nshifting weight casually\n\nbrushing hair back\n\nchecking phone\n\nlooking off to the side with nonchalance\n\nlight step forward or backward\n\nresting hands in pockets\n\nsmall head turn or glance\n\nstretching arms slightly\n\nflicking through something in their hand (keys, sunglasses, etc.)\n\nDo NOT suggest exaggerated actions, dancing, big gestures, or anything that breaks the subtle streetwear vibe.\n\nOUTPUT FORMAT\n\nAlways output exactly in the following JSON structure:\n\n{\n  The camera moves in a Slow Arc Shot as the model casually adjusts their shirt and glances off to the side with a relaxed, confident expression.\n}\n\n\nDo NOT include any additional commentary, reasoning, or explanations.\nOnly output the final JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        784,
+        -48
+      ],
+      "id": "46e41ba9-b53f-4460-a81f-9d9c4ba4cf0a",
+      "name": "Video Concept Generator"
+    },
+    {
+      "parameters": {
+        "content": "# Analyze Image & Build Concept\n",
+        "height": 480,
+        "width": 688,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        480,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "e518bd8f-1e18-44d3-b1fd-ee82b58dd5d3",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Generate Videos with Kling 2.6",
+        "height": 480,
+        "width": 592,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1264,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "48354717-84aa-4f86-ada1-d409eca81156",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# Download & Upload to Google Drive",
+        "height": 480,
+        "width": 592,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1920,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "5a3a1b8e-139c-4635-a066-910b2274e95f",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Kling 2.6 Creative Director\n\nThis workflow pulls video-generation tasks from a Notion database, analyzes each reference image, generates a cinematic video concept using the Creative Director AI agent, sends the concept + image to Kling 2.6 via Fal API for video generation, downloads the resulting video, uploads it to Google Drive, and updates the corresponding Notion entry with the final video link and a completed status.\n\n### Workflow Steps\n\nFetch Tasks from Notion\nRetrieves all video-generation rows from the **Notion database** [linked here](https://www.notion.so/2c255c8ec06681baa87fef899524698f?v=2c255c8ec066816fb5e6000c829e0d97)\n\nLoop Over Items\nProcesses each task individually as its own workflow run.\n\nAnalyze Target Image\nOpenAI's vision model extracts composition, lighting, pose, environment, and style. (You can also use Gemini here).\n\nVideo Concept Generator\nAn AI agent uses the image analysis + preset camera/actor motion rules to create a cinematic concept prompt for Kling 2.6.\n\n[Kling 2.6 Video Generation (Fal AI)](https://fal.ai/models/fal-ai/kling-video/v2.6/pro/image-to-video/)\nSends the concept prompt to Kling 2.6, waits for processing, then retrieves the video URL.\n\nDownload + Upload Video\nDownloads the generated video as a binary file, uploads it to Google Drive, retrieves the file link.\n\nUpdate Notion\nInserts the Google Drive link into the Notion row and changes the status to Done.\n\n\n\n## Costs \n\nCost per Second: $0.07 (no audio) / $0.14 (with audio)\t\n\n5s video with no audio = **$0.35**\n\n5s video with audio = **$0.70**\n\n10s with no audio = **$0.70**\n\n10s video with no audio = **$0.70**\n\n10s video with audio = **$1.40**\n",
+        "height": 1008,
+        "width": 560,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1200,
+        -496
+      ],
+      "typeVersion": 1,
+      "id": "b8268f75-13c0-4076-b9ee-6cbfb5143239",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get Shots from Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Video Concept Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Video Concept Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Video Concept Generator",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kling 2.6": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video": {
+      "main": [
+        [
+          {
+            "node": "Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Update a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a database page": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Shots from Notion": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Concept Generator": {
+      "main": [
+        [
+          {
+            "node": "Kling 2.6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f42e48ab-73f0-42c9-9cc6-961e5e390111",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "656bbfbdf53d5caac311209987645b9d4dd984c26700e3eedc3f81989c0df7d7"
+  },
+  "id": "2iE02kKX9nx1vWMp",
+  "tags": []
+}
